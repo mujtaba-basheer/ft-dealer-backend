@@ -1,0 +1,8 @@
+node_modules
+scripts
+.env
+.env.production
+script.js
+dist/scripts
+src/scripts
+*.pem
