@@ -1,85 +1,112 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, Response, CookieOptions } from "express";
 import { config } from "dotenv";
+import { hash } from "bcryptjs";
+import * as Joi from "joi";
 import AppError from "../utils/app-error";
 import catchAsync from "../utils/catch-async";
+import { signToken } from "../utils/auth";
 import db from "../db";
+import roles from "../data/roles";
 config();
 
 type UserT = {
   name: string;
   email: string;
-  mobile?: string;
   password: string;
 };
 
-export const getAllUsers = catchAsync(
+export const addUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      db.query(
-        `SELECT name, email, phone FROM users;`,
-        (err, results, fields) => {
-          if (err) return next(new AppError(err.message, 403));
+      type ReqBodyT = {
+        name: string;
+        email: string;
+        password: string;
+        role: string;
+      };
+      const user = req.body as ReqBodyT;
 
-          res.status(200).json({
-            status: true,
-            data: results,
-          });
-        }
-      );
-    } catch (error) {
-      return next(new AppError(error.message, error.statusCode || 501));
-    }
-  }
-);
+      // defining user schema
+      const schema = Joi.object<ReqBodyT>({
+        name: Joi.string().min(3).required(),
+        email: Joi.string().email().required(),
+        password: Joi.string().min(8).max(50).required(),
+        role: Joi.number()
+          .integer()
+          .allow(...roles),
+      });
 
-export const deleteUser = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const email: string = req.params.email;
-      if (email) {
+      // validating request body again schema
+      const { error: validationError } = schema.validate(user);
+      if (!validationError) {
+        const { name, email, password, role } = user;
+        // hashing password for security purpose
+        const hashedPassword = await hash(password, 12);
+
+        // adding user data to db
         db.query(
-          `DELETE FROM users WHERE email="${email}";`,
+          {
+            sql: `INSERT INTO
+            users (
+              name,
+              email,
+              role,
+              password
+            ) VALUES (
+              ?,
+              ?,
+              ?,
+              ?
+            );`,
+            values: [name, email, role, hashedPassword],
+          },
           (err, results, fields) => {
-            if (err) return next(new AppError(err.message, 403));
-            // @ts-ignore
-            else if (results.affectedRows === 0) {
-              res.status(404).json({
-                status: false,
-                msg: `User Not Found`,
-              });
-            } else {
-              res.status(200).json({
-                status: true,
-                msg: `Deleted user with email: ${email}`,
-              });
+            if (err) {
+              if (err.errno === 1062) {
+                return next(
+                  new AppError(
+                    `User with email '${email}' already exists!`,
+                    403
+                  )
+                );
+              }
+              console.error(err);
+              return next(new AppError(err.message, 403));
             }
+
+            const obj = Object.assign({}, user);
+            delete obj.password;
+
+            const token = signToken(obj);
+
+            const cookieOptions: CookieOptions = {
+              expires: new Date(Date.now() + +process.env.COOKIE_EXPIRES_IN),
+              path: "/",
+              sameSite: "none",
+              secure: true,
+              domain: "localhost",
+            };
+            if (process.env.NODE_ENV === "production") {
+              cookieOptions.httpOnly = true;
+              cookieOptions.secure = true;
+              cookieOptions.domain = "ftdealer.com";
+            }
+            res.cookie("jwt", token, cookieOptions);
+
+            // sending response
+            res.status(200).json({
+              status: true,
+              data: {
+                name: obj.name,
+                email: obj.email,
+              },
+              msg: "User Added Successfully",
+            });
           }
         );
-      } else throw new Error("Invalid params");
-    } catch (error) {
-      return next(new AppError(error.message, error.statusCode || 501));
-    }
-  }
-);
-
-export const getMe = catchAsync(
-  async (req: Request & { user: UserT }, res: Response, next: NextFunction) => {
-    try {
-      db.query(
-        `SELECT name, email, mobile FROM users WHERE email = "${req.user.email}";`,
-        (err, results: UserT[], fields) => {
-          if (err) return next(new AppError(err.message, 403));
-
-          if (results.length === 0) {
-            return next(new AppError("User not found!", 404));
-          }
-
-          res.status(200).json({
-            status: true,
-            data: results[0],
-          });
-        }
-      );
+      } else {
+        return next(new AppError(validationError.details[0].message, 400));
+      }
     } catch (error) {
       return next(new AppError(error.message, error.statusCode || 501));
     }

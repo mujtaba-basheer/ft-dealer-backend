@@ -5,7 +5,9 @@ const cors = () => {
     return function (req, res, next) {
         const origin = req.headers.origin;
         try {
-            res.setHeader("Access-Control-Allow-Origin", allowed_origins.includes(origin) ? origin : allowed_origins[0]);
+            res.setHeader("Access-Control-Allow-Origin", "*"
+            // allowed_origins.includes(origin) ? origin : allowed_origins[0]
+            );
             // res.setHeader("Access-Control-Allow-Origin", "*");
             res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
             res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");

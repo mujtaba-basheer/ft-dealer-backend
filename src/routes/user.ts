@@ -1,16 +1,10 @@
 import { Router } from "express";
-import { getAllUsers, getMe, deleteUser } from "../apis/user";
-import { admin, protect, validate } from "../middleware/auth";
+import { addUser } from "../apis/user";
+import { checkAdmin } from "../middleware/auth";
 
 const userRouter = Router();
 
-// get all users
-userRouter.get("/all", protect, getAllUsers);
-
-// get current user
-userRouter.get("/me", protect, getMe);
-
-// delete current user
-userRouter.delete("/delete/:email", admin, deleteUser);
+// add a new user
+userRouter.post("/add", checkAdmin, addUser);
 
 export default userRouter;

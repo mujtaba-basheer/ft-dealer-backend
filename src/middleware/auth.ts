@@ -1,9 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import { promisify } from "util";
 import { decode, Jwt, JwtPayload, Secret, verify } from "jsonwebtoken";
 import { getUserDetails } from "../utils/user";
 import AppError from "../utils/app-error";
 import catchAsync from "../utils/catch-async";
+
+type UserT = {
+  name: string;
+  email: string;
+  password: string;
+  role: number;
+};
 
 export const protect = catchAsync(
   async (req: Request & { user: any }, res: Response, next: NextFunction) => {
@@ -65,15 +71,23 @@ export const checkLogin = catchAsync(
   }
 );
 
-export const admin = catchAsync(
-  async (req: Request & { user: any }, res: Response, next: NextFunction) => {
+export const checkAdmin = catchAsync(
+  async (req: Request & { user: UserT }, res: Response, next: NextFunction) => {
     try {
       const bearerToken = req.headers.authorization;
+      let token: string;
       if (bearerToken && bearerToken.startsWith("Bearer ")) {
-        const token = bearerToken.split(" ")[1];
+        token = bearerToken.split(" ")[1];
+      } else if (req.cookies["jwt"]) {
+        token = req.cookies["jwt"];
+      }
+      if (token) {
         try {
-          const user = verify(token, process.env.JWT_SECRET) as JwtPayload;
-          if (user.email === "mujtababasheer14@gmail.com") next();
+          const user = verify(
+            token,
+            process.env.JWT_SECRET
+          ) as JwtPayload as UserT;
+          if (user.role === 1) next();
           else return next(new AppError("Unauthorized [Not an Admin]", 401));
         } catch (error) {
           throw new AppError("Token Invalid or Expired", 403);

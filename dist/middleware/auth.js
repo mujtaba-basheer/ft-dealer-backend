@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validate = exports.admin = exports.checkLogin = exports.protect = void 0;
+exports.validate = exports.checkAdmin = exports.checkLogin = exports.protect = void 0;
 const jsonwebtoken_1 = require("jsonwebtoken");
 const app_error_1 = require("../utils/app-error");
 const catch_async_1 = require("../utils/catch-async");
@@ -69,14 +69,20 @@ exports.checkLogin = (0, catch_async_1.default)(async (req, res, next) => {
         return next(new app_error_1.default(error.message, error.statusCode || 401));
     }
 });
-exports.admin = (0, catch_async_1.default)(async (req, res, next) => {
+exports.checkAdmin = (0, catch_async_1.default)(async (req, res, next) => {
     try {
         const bearerToken = req.headers.authorization;
+        let token;
         if (bearerToken && bearerToken.startsWith("Bearer ")) {
-            const token = bearerToken.split(" ")[1];
+            token = bearerToken.split(" ")[1];
+        }
+        else if (req.cookies["jwt"]) {
+            token = req.cookies["jwt"];
+        }
+        if (token) {
             try {
                 const user = (0, jsonwebtoken_1.verify)(token, process.env.JWT_SECRET);
-                if (user.email === "mujtababasheer14@gmail.com")
+                if (user.role === 1)
                     next();
                 else
                     return next(new app_error_1.default("Unauthorized [Not an Admin]", 401));

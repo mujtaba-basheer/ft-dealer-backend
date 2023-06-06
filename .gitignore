@@ -6,3 +6,4 @@ script.js
 dist/scripts
 src/scripts
 *.pem
+test.js
