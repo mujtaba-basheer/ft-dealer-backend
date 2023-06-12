@@ -12,7 +12,7 @@ type UserT = {
 };
 
 export const protect = catchAsync(
-  async (req: Request & { user: any }, res: Response, next: NextFunction) => {
+  async (req: Request & { user: UserT }, res: Response, next: NextFunction) => {
     try {
       const bearerToken = req.headers.authorization;
       let token: string;
@@ -25,7 +25,7 @@ export const protect = catchAsync(
         verify(token, process.env.JWT_SECRET, (err, payload) => {
           if (err) {
             if (err.name === "TokenExpiredError") {
-              const user = decode(token);
+              const user = decode(token) as JwtPayload as UserT;
               req.user = user;
               next();
             } else {
@@ -33,7 +33,7 @@ export const protect = catchAsync(
               throw new AppError("Token Invalid or Expired", 403);
             }
           } else {
-            req.user = payload;
+            req.user = payload as UserT;
             next();
           }
         });
@@ -74,25 +74,9 @@ export const checkLogin = catchAsync(
 export const checkAdmin = catchAsync(
   async (req: Request & { user: UserT }, res: Response, next: NextFunction) => {
     try {
-      const bearerToken = req.headers.authorization;
-      let token: string;
-      if (bearerToken && bearerToken.startsWith("Bearer ")) {
-        token = bearerToken.split(" ")[1];
-      } else if (req.cookies["jwt"]) {
-        token = req.cookies["jwt"];
-      }
-      if (token) {
-        try {
-          const user = verify(
-            token,
-            process.env.JWT_SECRET
-          ) as JwtPayload as UserT;
-          if (user.role === 1) next();
-          else return next(new AppError("Unauthorized [Not an Admin]", 401));
-        } catch (error) {
-          throw new AppError("Token Invalid or Expired", 403);
-        }
-      } else throw new Error("Unauthorized");
+      const { role } = req.user;
+      if (role === 1) return next();
+      throw new Error("Unauthorized!");
     } catch (error) {
       return next(new AppError(error.message, error.statusCode || 401));
     }

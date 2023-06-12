@@ -71,28 +71,10 @@ exports.checkLogin = (0, catch_async_1.default)(async (req, res, next) => {
 });
 exports.checkAdmin = (0, catch_async_1.default)(async (req, res, next) => {
     try {
-        const bearerToken = req.headers.authorization;
-        let token;
-        if (bearerToken && bearerToken.startsWith("Bearer ")) {
-            token = bearerToken.split(" ")[1];
-        }
-        else if (req.cookies["jwt"]) {
-            token = req.cookies["jwt"];
-        }
-        if (token) {
-            try {
-                const user = (0, jsonwebtoken_1.verify)(token, process.env.JWT_SECRET);
-                if (user.role === 1)
-                    next();
-                else
-                    return next(new app_error_1.default("Unauthorized [Not an Admin]", 401));
-            }
-            catch (error) {
-                throw new app_error_1.default("Token Invalid or Expired", 403);
-            }
-        }
-        else
-            throw new Error("Unauthorized");
+        const { role } = req.user;
+        if (role === 1)
+            return next();
+        throw new Error("Unauthorized!");
     }
     catch (error) {
         return next(new app_error_1.default(error.message, error.statusCode || 401));

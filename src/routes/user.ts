@@ -1,10 +1,16 @@
 import { Router } from "express";
-import { addUser } from "../apis/user";
-import { checkAdmin } from "../middleware/auth";
+import { addUser, getAllUsers, updateUser } from "../apis/user";
+import { checkAdmin, protect } from "../middleware/auth";
 
 const userRouter = Router();
 
 // add a new user
-userRouter.post("/add", checkAdmin, addUser);
+userRouter.post("/", protect, checkAdmin, addUser);
+
+// update a user
+userRouter.put("/:email", protect, checkAdmin, updateUser);
+
+// get all users
+userRouter.get("/", protect, checkAdmin, getAllUsers);
 
 export default userRouter;
