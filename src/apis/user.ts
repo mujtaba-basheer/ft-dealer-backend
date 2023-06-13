@@ -2,6 +2,7 @@ import { NextFunction, Request, Response, CookieOptions } from "express";
 import { config } from "dotenv";
 import { hash } from "bcryptjs";
 import * as Joi from "joi";
+import sendMail from "../utils/mail";
 import AppError from "../utils/app-error";
 import catchAsync from "../utils/catch-async";
 import { signToken } from "../utils/auth";
@@ -20,18 +21,14 @@ export const addUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       type ReqBodyT = {
-        name: string;
         email: string;
-        password: string;
-        role: string;
+        role: number;
       };
       const user = req.body as ReqBodyT;
 
       // defining user schema
       const schema = Joi.object<ReqBodyT>({
-        name: Joi.string().min(3).required(),
         email: Joi.string().email().required(),
-        password: Joi.string().min(8).max(50).required(),
         role: Joi.number()
           .integer()
           .allow(...roles),
@@ -40,26 +37,22 @@ export const addUser = catchAsync(
       // validating request body again schema
       const { error: validationError } = schema.validate(user);
       if (!validationError) {
-        const { name, email, password, role } = user;
-        // hashing password for security purpose
-        const hashedPassword = await hash(password, 12);
+        const { email, role } = user;
 
         // adding user data to db
         db.query(
           {
             sql: `INSERT INTO
             users (
-              name,
               email,
               role,
-              password
+              status
             ) VALUES (
               ?,
               ?,
-              ?,
-              ?
+              "inactive"
             );`,
-            values: [name, email, role, hashedPassword],
+            values: [email, role],
           },
           (err, results, fields) => {
             if (err) {
@@ -76,33 +69,15 @@ export const addUser = catchAsync(
             }
 
             const obj = Object.assign({}, user);
-            delete obj.password;
 
             const token = signToken(obj);
-
-            const cookieOptions: CookieOptions = {
-              expires: new Date(Date.now() + +process.env.COOKIE_EXPIRES_IN),
-              path: "/",
-              sameSite: "none",
-              secure: true,
-              domain: "localhost",
-            };
-            if (process.env.NODE_ENV === "production") {
-              cookieOptions.httpOnly = true;
-              cookieOptions.secure = true;
-              cookieOptions.domain = "ftdealer.com";
-            }
-            res.cookie("jwt", token, cookieOptions);
 
             // sending response
             res.status(200).json({
               status: true,
-              data: {
-                name: obj.name,
-                email: obj.email,
-              },
               msg: "User Added Successfully",
             });
+            sendMail(email, token);
           }
         );
       } else {
@@ -115,18 +90,25 @@ export const addUser = catchAsync(
 );
 
 export const getAllUsers = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request & { user: UserT }, res: Response, next: NextFunction) => {
     try {
+      const { email } = req.user;
+
+      const fetchUsersQuery = `
+      SELECT
+        u.name,
+        email,
+        r.title as role,
+        IF(email = ?, 1, 0) as self
+      FROM
+        (users as u
+        LEFT JOIN (roles as r) ON (u.role = r.id));
+      `;
       db.query(
-        `
-        SELECT
-          u.name,
-          email,
-          r.title as role
-        FROM
-          (users as u
-          LEFT JOIN (roles as r) ON (u.role = r.id));
-        `,
+        {
+          sql: fetchUsersQuery,
+          values: [email],
+        },
         (err, results: UserT[], fields) => {
           if (err) {
             console.error(err);

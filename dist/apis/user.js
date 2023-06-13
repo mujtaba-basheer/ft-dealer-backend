@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateUser = exports.getAllUsers = exports.addUser = void 0;
 const dotenv_1 = require("dotenv");
-const bcryptjs_1 = require("bcryptjs");
 const Joi = require("joi");
+const mail_1 = require("../utils/mail");
 const app_error_1 = require("../utils/app-error");
 const catch_async_1 = require("../utils/catch-async");
 const auth_1 = require("../utils/auth");
@@ -15,9 +15,7 @@ exports.addUser = (0, catch_async_1.default)(async (req, res, next) => {
         const user = req.body;
         // defining user schema
         const schema = Joi.object({
-            name: Joi.string().min(3).required(),
             email: Joi.string().email().required(),
-            password: Joi.string().min(8).max(50).required(),
             role: Joi.number()
                 .integer()
                 .allow(...roles_1.default),
@@ -25,24 +23,20 @@ exports.addUser = (0, catch_async_1.default)(async (req, res, next) => {
         // validating request body again schema
         const { error: validationError } = schema.validate(user);
         if (!validationError) {
-            const { name, email, password, role } = user;
-            // hashing password for security purpose
-            const hashedPassword = await (0, bcryptjs_1.hash)(password, 12);
+            const { email, role } = user;
             // adding user data to db
             db_1.default.query({
                 sql: `INSERT INTO
             users (
-              name,
               email,
               role,
-              password
+              status
             ) VALUES (
               ?,
               ?,
-              ?,
-              ?
+              "inactive"
             );`,
-                values: [name, email, role, hashedPassword],
+                values: [email, role],
             }, (err, results, fields) => {
                 if (err) {
                     if (err.errno === 1062) {
@@ -52,30 +46,13 @@ exports.addUser = (0, catch_async_1.default)(async (req, res, next) => {
                     return next(new app_error_1.default(err.message, 403));
                 }
                 const obj = Object.assign({}, user);
-                delete obj.password;
                 const token = (0, auth_1.signToken)(obj);
-                const cookieOptions = {
-                    expires: new Date(Date.now() + +process.env.COOKIE_EXPIRES_IN),
-                    path: "/",
-                    sameSite: "none",
-                    secure: true,
-                    domain: "localhost",
-                };
-                if (process.env.NODE_ENV === "production") {
-                    cookieOptions.httpOnly = true;
-                    cookieOptions.secure = true;
-                    cookieOptions.domain = "ftdealer.com";
-                }
-                res.cookie("jwt", token, cookieOptions);
                 // sending response
                 res.status(200).json({
                     status: true,
-                    data: {
-                        name: obj.name,
-                        email: obj.email,
-                    },
                     msg: "User Added Successfully",
                 });
+                (0, mail_1.default)(email, token);
             });
         }
         else {
@@ -88,15 +65,21 @@ exports.addUser = (0, catch_async_1.default)(async (req, res, next) => {
 });
 exports.getAllUsers = (0, catch_async_1.default)(async (req, res, next) => {
     try {
-        db_1.default.query(`
-        SELECT
-          u.name,
-          email,
-          r.title as role
-        FROM
-          (users as u
-          LEFT JOIN (roles as r) ON (u.role = r.id));
-        `, (err, results, fields) => {
+        const { email } = req.user;
+        const fetchUsersQuery = `
+      SELECT
+        u.name,
+        email,
+        r.title as role,
+        IF(email = ?, 1, 0) as self
+      FROM
+        (users as u
+        LEFT JOIN (roles as r) ON (u.role = r.id));
+      `;
+        db_1.default.query({
+            sql: fetchUsersQuery,
+            values: [email],
+        }, (err, results, fields) => {
             if (err) {
                 console.error(err);
                 return next(new app_error_1.default(err.message, 403));

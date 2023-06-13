@@ -16,7 +16,7 @@ type StoreItem = {
 type UserObj = {
   name: string;
   email: string;
-  mobile?: string;
+  role: number;
 };
 
 const store: StoreItem[] = [
@@ -29,7 +29,7 @@ const store: StoreItem[] = [
 ];
 
 // sign jwt token
-export const signToken: (user: UserObj) => string = (user) => {
+export const signToken: (user: UserObj & any) => string = (user) => {
   return jwt.sign(user, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });

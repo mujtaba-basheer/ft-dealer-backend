@@ -6,7 +6,7 @@ import AppError from "../utils/app-error";
 import catchAsync from "../utils/catch-async";
 import { config } from "dotenv";
 import db from "../db";
-import { decode } from "jsonwebtoken";
+import { decode, verify } from "jsonwebtoken";
 config();
 
 type UserT = {
@@ -28,6 +28,7 @@ export const login = catchAsync(
         password: string;
       };
       const body = req.body as ReqBody;
+      console.log(body);
 
       // defining request body schema
       const schema = Joi.object<ReqBody>({
@@ -99,146 +100,109 @@ export const login = catchAsync(
   }
 );
 
-export const googleLogin = catchAsync(
+export const activate = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       type ReqBody = {
-        credentials: string;
+        name: string;
+        password: string;
+        auth_token: string;
       };
       const body = req.body as ReqBody;
 
       // defining request body schema
       const schema = Joi.object<ReqBody>({
-        credentials: Joi.string().required(),
+        name: Joi.string().required(),
+        password: Joi.string().min(8).max(50).required(),
+        auth_token: Joi.string().required(),
       });
 
       // validating request body again schema
       const { error: validationError } = schema.validate(body);
       if (!validationError) {
-        const { credentials } = body;
-        const { email } = decode(credentials) as JwtDecodedT;
-
-        db.query(
-          `SELECT
-            email, name
-          FROM
-            users
-          WHERE
-            email = "${email}"
+        const { name, auth_token, password } = body;
+        verify(auth_token, process.env.JWT_SECRET, (err, decoded: UserT) => {
+          if (err) return next(new AppError(err.message, 401));
+          const { email } = decoded;
+          db.query(
+            {
+              sql: `
+            SELECT
+              email, name, role
+            FROM
+              users
+            WHERE
+              email = ?
+              AND status = "inactive";
           `,
-          async (err, results: UserT[], fields) => {
-            if (err) return next(new AppError(err.message, 403));
+              values: [email],
+            },
+            async (err, results: UserT[], fields) => {
+              if (err) return next(new AppError(err.message, 403));
 
-            if (results.length === 0)
-              return next(new AppError("No user found with this email", 404));
+              if (results.length === 0)
+                return next(new AppError("User not found", 404));
 
-            const user = results[0];
-            const obj = Object.assign({}, user);
+              // hashing password for security purpose
+              const hashedPassword = await hash(password, 12);
 
-            const token = signToken(obj);
+              const user = results[0];
 
-            const cookieOptions: CookieOptions = {
-              expires: new Date(Date.now() + +process.env.COOKIE_EXPIRES_IN),
-              path: "/",
-              sameSite: "none",
-              secure: true,
-            };
-            if (process.env.NODE_ENV === "production") {
-              cookieOptions.httpOnly = true;
-              cookieOptions.secure = true;
-              cookieOptions.domain = "takeuforward.org";
-            }
-            res.cookie("jwt", token, cookieOptions);
+              const activateUserQuery = `
+              UPDATE
+                users
+              SET
+                password = "${hashedPassword}",
+                status = "active",
+                name = ?
+              WHERE
+                email = ?;
+              `;
+              db.query(
+                {
+                  sql: activateUserQuery,
+                  values: [name, email],
+                },
+                (err, results) => {
+                  if (err) return next(new AppError(err.message, 403));
 
-            res.status(200).json({
-              status: true,
-              data: {
-                name: obj.name,
-                email: obj.email,
-              },
-              msg: "Logged In Successfully",
-            });
-          }
-        );
-      } else {
-        console.log(validationError);
-        return next(new AppError("Missing or invalid parameters", 400));
-      }
-    } catch (error) {
-      return next(new AppError(error.message, error.statusCode || 501));
-    }
-  }
-);
+                  const token = signToken({
+                    email,
+                    name: user.name,
+                    role: user.role,
+                  });
 
-export const googleSignup = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      type ReqBody = {
-        credentials: string;
-      };
-      const body = req.body as ReqBody;
+                  const cookieOptions: CookieOptions = {
+                    expires: new Date(
+                      Date.now() + +process.env.COOKIE_EXPIRES_IN
+                    ),
+                    path: "/",
+                    sameSite: "none",
+                    domain: "localhost",
+                  };
+                  if (process.env.NODE_ENV === "production") {
+                    cookieOptions.httpOnly = true;
+                    cookieOptions.domain = "ftdealer.com";
+                    cookieOptions.secure = true;
+                  }
+                  res.cookie("jwt", token, cookieOptions);
 
-      // defining request body schema
-      const schema = Joi.object<ReqBody>({
-        credentials: Joi.string().required(),
-      });
-
-      // validating request body again schema
-      const { error: validationError } = schema.validate(body);
-      if (!validationError) {
-        const { credentials } = body;
-        const { email, name } = decode(credentials) as JwtDecodedT;
-
-        // adding user data to db
-        db.query(
-          `INSERT INTO
-          users (
-            name,
-            email
-          ) VALUES (
-            "${name}",
-            "${email}"
-          );`,
-          (err, results, fields) => {
-            if (err) {
-              console.error(err);
-              return next(
-                new AppError(
-                  err.errno === 1062
-                    ? `User with email '${email}' already exists!`
-                    : err.message,
-                  403
-                )
+                  // sending response
+                  res.status(200).json({
+                    status: true,
+                    data: {
+                      name: user.name,
+                      email: user.email,
+                    },
+                    msg: "Account Activated Successfully",
+                  });
+                }
               );
             }
-
-            const token = signToken({ name, email });
-
-            const cookieOptions: CookieOptions = {
-              expires: new Date(Date.now() + +process.env.COOKIE_EXPIRES_IN),
-              path: "/",
-              sameSite: "none",
-              secure: true,
-            };
-            if (process.env.NODE_ENV === "production") {
-              cookieOptions.httpOnly = true;
-              cookieOptions.secure = true;
-              cookieOptions.domain = "takeuforward.org";
-            }
-            res.cookie("jwt", token, cookieOptions);
-
-            // sending response
-            res.status(200).json({
-              status: true,
-              data: {
-                name,
-                email,
-              },
-              msg: "Account Created Successfully",
-            });
-          }
-        );
+          );
+        });
       } else {
+        console.log(validationError);
         return next(new AppError(validationError.details[0].message, 400));
       }
     } catch (error) {

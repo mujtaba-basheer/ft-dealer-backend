@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import { decode, Jwt, JwtPayload, Secret, verify } from "jsonwebtoken";
-import { getUserDetails } from "../utils/user";
 import AppError from "../utils/app-error";
 import catchAsync from "../utils/catch-async";
 

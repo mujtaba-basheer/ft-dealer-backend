@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-const allowed_origins = ["https://umrit.in", "https://takeuforward.org"];
+const allowed_origins = ["https://dealerportal.webflow.io"];
 
 const cors = () => {
   return function (req: Request, res: Response, next: NextFunction) {
@@ -8,8 +8,11 @@ const cors = () => {
     try {
       res.setHeader(
         "Access-Control-Allow-Origin",
-        "*"
-        // allowed_origins.includes(origin) ? origin : allowed_origins[0]
+        process.env.NODE_ENV === "development"
+          ? "https://dealerportal.webflow.io"
+          : allowed_origins.includes(origin)
+          ? origin
+          : allowed_origins[0]
       );
       // res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
