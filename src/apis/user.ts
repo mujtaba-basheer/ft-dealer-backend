@@ -89,6 +89,49 @@ export const addUser = catchAsync(
   }
 );
 
+export const deleteUser = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      type ReqParamT = {
+        email: string;
+      };
+      const { email } = req.params as ReqParamT;
+
+      // deleting user data to db
+      const deleteUserQuery = `
+      DELETE FROM
+        users
+      WHERE
+        email = ?
+      `;
+      db.query(
+        {
+          sql: deleteUserQuery,
+          values: [email],
+        },
+        (err, results: { affectedRows: number }, fields) => {
+          if (err) {
+            console.error(err);
+            return next(new AppError(err.message, 403));
+          } else if (results.affectedRows === 0) {
+            return next(
+              new AppError(`User with email "${email}" not found!`, 404)
+            );
+          }
+
+          // sending response
+          res.status(200).json({
+            status: true,
+            msg: "User Deleted Successfully",
+          });
+        }
+      );
+    } catch (error) {
+      return next(new AppError(error.message, error.statusCode || 501));
+    }
+  }
+);
+
 export const getAllUsers = catchAsync(
   async (req: Request & { user: UserT }, res: Response, next: NextFunction) => {
     try {

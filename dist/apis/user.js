@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUser = exports.getAllUsers = exports.addUser = void 0;
+exports.updateUser = exports.getAllUsers = exports.deleteUser = exports.addUser = void 0;
 const dotenv_1 = require("dotenv");
 const Joi = require("joi");
 const mail_1 = require("../utils/mail");
@@ -58,6 +58,38 @@ exports.addUser = (0, catch_async_1.default)(async (req, res, next) => {
         else {
             return next(new app_error_1.default(validationError.details[0].message, 400));
         }
+    }
+    catch (error) {
+        return next(new app_error_1.default(error.message, error.statusCode || 501));
+    }
+});
+exports.deleteUser = (0, catch_async_1.default)(async (req, res, next) => {
+    try {
+        const { email } = req.params;
+        // deleting user data to db
+        const deleteUserQuery = `
+      DELETE FROM
+        users
+      WHERE
+        email = ?
+      `;
+        db_1.default.query({
+            sql: deleteUserQuery,
+            values: [email],
+        }, (err, results, fields) => {
+            if (err) {
+                console.error(err);
+                return next(new app_error_1.default(err.message, 403));
+            }
+            else if (results.affectedRows === 0) {
+                return next(new app_error_1.default(`User with email "${email}" not found!`, 404));
+            }
+            // sending response
+            res.status(200).json({
+                status: true,
+                msg: "User Deleted Successfully",
+            });
+        });
     }
     catch (error) {
         return next(new app_error_1.default(error.message, error.statusCode || 501));

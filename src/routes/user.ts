@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addUser, getAllUsers, updateUser } from "../apis/user";
+import { addUser, deleteUser, getAllUsers, updateUser } from "../apis/user";
 import { checkAdmin, protect } from "../middleware/auth";
 
 const userRouter = Router();
@@ -9,6 +9,9 @@ userRouter.post("/", protect, checkAdmin, addUser);
 
 // update a user
 userRouter.put("/:email", protect, checkAdmin, updateUser);
+
+// delete a user
+userRouter.delete("/:email", protect, checkAdmin, deleteUser);
 
 // get all users
 userRouter.get("/", protect, checkAdmin, getAllUsers);
