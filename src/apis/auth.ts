@@ -218,12 +218,12 @@ export const logout = catchAsync(
         expires: new Date(Date.now()),
         path: "/",
         sameSite: "none",
-        secure: true,
+        domain: "localhost",
       };
       if (process.env.NODE_ENV === "production") {
         cookieOptions.httpOnly = true;
         cookieOptions.secure = true;
-        cookieOptions.domain = "takeuforward.org";
+        cookieOptions.domain = process.env.COOKIE_DOMAIN;
       }
       res.clearCookie("jwt", cookieOptions);
 
