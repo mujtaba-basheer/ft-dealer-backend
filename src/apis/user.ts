@@ -203,7 +203,7 @@ export const updateUser = catchAsync(
         FROM
           users
         WHERE
-          email = "${email};"
+          email = "${email}";
         `;
         db.query(getUserQuery, (err, result: UserT[], fields) => {
           if (err) {
@@ -211,7 +211,7 @@ export const updateUser = catchAsync(
             return next(new AppError(err.message, 500));
           }
           // @ts-ignore
-          else if (result.affectedRows === 0) {
+          else if (result.length === 0) {
             return next(
               new AppError(`User with email "${email}" not found!`, 404)
             );

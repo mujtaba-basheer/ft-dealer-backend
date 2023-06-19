@@ -149,7 +149,7 @@ exports.updateUser = (0, catch_async_1.default)(async (req, res, next) => {
         FROM
           users
         WHERE
-          email = "${email};"
+          email = "${email}";
         `;
             db_1.default.query(getUserQuery, (err, result, fields) => {
                 if (err) {
@@ -157,7 +157,7 @@ exports.updateUser = (0, catch_async_1.default)(async (req, res, next) => {
                     return next(new app_error_1.default(err.message, 500));
                 }
                 // @ts-ignore
-                else if (result.affectedRows === 0) {
+                else if (result.length === 0) {
                     return next(new app_error_1.default(`User with email "${email}" not found!`, 404));
                 }
                 // function to actually perform the update
