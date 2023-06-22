@@ -19,7 +19,7 @@ if (process.env.NODE_ENV === "development") {
 }
 app.use("/api/auth", index_1.authRouter);
 app.use("/api/user", index_1.userRouter);
-app.use("/api/topic", index_1.topicRouter);
+app.use("/api/trailer", index_1.trailerRouter);
 // test endpoint
 app.get("/*", (req, res) => {
     res.send("API is running...\n");

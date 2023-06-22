@@ -11,9 +11,9 @@ const db_1 = require("../db");
 const jsonwebtoken_1 = require("jsonwebtoken");
 (0, dotenv_1.config)();
 exports.login = (0, catch_async_1.default)(async (req, res, next) => {
+    console.log("here");
     try {
         const body = req.body;
-        console.log(body);
         // defining request body schema
         const schema = Joi.object({
             email: Joi.string().email().required(),
@@ -23,19 +23,25 @@ exports.login = (0, catch_async_1.default)(async (req, res, next) => {
         const { error: validationError } = schema.validate(body);
         if (!validationError) {
             const { email, password } = body;
+            const fetchUserQuery = `
+        SELECT
+          email,
+          password,
+          role,
+          fname
+        FROM
+          users
+        WHERE
+          email = ?;
+        `;
             db_1.default.query({
-                sql: `
-            SELECT
-              email, password, role, name
-            FROM
-              users
-            WHERE
-              email = ?;
-          `,
+                sql: fetchUserQuery,
                 values: [email],
             }, async (err, results, fields) => {
-                if (err)
-                    return next(new app_error_1.default(err.message, 403));
+                if (err) {
+                    console.error(err);
+                    return next(new app_error_1.default(err.message, 400));
+                }
                 if (results.length === 0)
                     return next(new app_error_1.default("User not found", 404));
                 const user = results[0];
@@ -57,7 +63,7 @@ exports.login = (0, catch_async_1.default)(async (req, res, next) => {
                     res.status(200).json({
                         status: true,
                         data: {
-                            name: obj.name,
+                            name: obj.fname,
                             email: obj.email,
                         },
                         msg: "Logged In Successfully",
@@ -73,6 +79,7 @@ exports.login = (0, catch_async_1.default)(async (req, res, next) => {
         }
     }
     catch (error) {
+        console.error(error);
         return next(new app_error_1.default(error.message, error.statusCode || 501));
     }
 });
@@ -96,7 +103,7 @@ exports.activate = (0, catch_async_1.default)(async (req, res, next) => {
                 db_1.default.query({
                     sql: `
             SELECT
-              email, name, role
+              email, fname, role
             FROM
               users
             WHERE
@@ -130,7 +137,7 @@ exports.activate = (0, catch_async_1.default)(async (req, res, next) => {
                             return next(new app_error_1.default(err.message, 403));
                         const token = (0, auth_1.signToken)({
                             email,
-                            name: user.name,
+                            name: user.fname,
                             role: user.role,
                         });
                         const cookieOptions = {
@@ -149,7 +156,7 @@ exports.activate = (0, catch_async_1.default)(async (req, res, next) => {
                         res.status(200).json({
                             status: true,
                             data: {
-                                name: user.name,
+                                name: user.fname,
                                 email: user.email,
                             },
                             msg: "Account Activated Successfully",

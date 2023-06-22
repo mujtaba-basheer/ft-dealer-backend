@@ -10,28 +10,28 @@ import { decode, verify } from "jsonwebtoken";
 config();
 
 type UserT = {
-  name: string;
+  fname: string;
   email: string;
   role: number;
   password: string;
 };
 type JwtDecodedT = {
   email: string;
-  name: string;
+  fname: string;
 };
 
 export const login = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    console.log("here");
     try {
-      type ReqBody = {
+      type ReqBodyT = {
         email: string;
         password: string;
       };
-      const body = req.body as ReqBody;
-      console.log(body);
+      const body = req.body as ReqBodyT;
 
       // defining request body schema
-      const schema = Joi.object<ReqBody>({
+      const schema = Joi.object<ReqBodyT>({
         email: Joi.string().email().required(),
         password: Joi.string().min(8).max(50).required(),
       });
@@ -41,20 +41,27 @@ export const login = catchAsync(
       if (!validationError) {
         const { email, password } = body;
 
+        const fetchUserQuery = `
+        SELECT
+          email,
+          password,
+          role,
+          fname
+        FROM
+          users
+        WHERE
+          email = ?;
+        `;
         db.query(
           {
-            sql: `
-            SELECT
-              email, password, role, name
-            FROM
-              users
-            WHERE
-              email = ?;
-          `,
+            sql: fetchUserQuery,
             values: [email],
           },
           async (err, results: UserT[], fields) => {
-            if (err) return next(new AppError(err.message, 403));
+            if (err) {
+              console.error(err);
+              return next(new AppError(err.message, 400));
+            }
 
             if (results.length === 0)
               return next(new AppError("User not found", 404));
@@ -81,7 +88,7 @@ export const login = catchAsync(
               res.status(200).json({
                 status: true,
                 data: {
-                  name: obj.name,
+                  name: obj.fname,
                   email: obj.email,
                 },
                 msg: "Logged In Successfully",
@@ -95,6 +102,7 @@ export const login = catchAsync(
         return next(new AppError(validationError.details[0].message, 400));
       }
     } catch (error) {
+      console.error(error);
       return next(new AppError(error.message, error.statusCode || 501));
     }
   }
@@ -128,7 +136,7 @@ export const activate = catchAsync(
             {
               sql: `
             SELECT
-              email, name, role
+              email, fname, role
             FROM
               users
             WHERE
@@ -168,7 +176,7 @@ export const activate = catchAsync(
 
                   const token = signToken({
                     email,
-                    name: user.name,
+                    name: user.fname,
                     role: user.role,
                   });
 
@@ -191,7 +199,7 @@ export const activate = catchAsync(
                   res.status(200).json({
                     status: true,
                     data: {
-                      name: user.name,
+                      name: user.fname,
                       email: user.email,
                     },
                     msg: "Account Activated Successfully",

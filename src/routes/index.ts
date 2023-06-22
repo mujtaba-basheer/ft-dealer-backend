@@ -1,7 +1,7 @@
 import authRouter from "./auth";
 import userRouter from "./user";
-import topicRouter from "./topics";
+import trailerRouter from "./trailer";
 
 export { authRouter };
 export { userRouter };
-export { topicRouter };
+export { trailerRouter };

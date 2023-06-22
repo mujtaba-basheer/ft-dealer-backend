@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "concurrently --kill-others \"npx tsc -w\" \"npm run server\"",
-    "server": "nodemon dist/index.js",
+    "server": "node dist/index.js",
     "prod": "node dist/index.js",
     "connect": "ssh -i \"tuf-node.pem\" ubuntu@ec2-43-205-115-239.ap-south-1.compute.amazonaws.com"
   },
