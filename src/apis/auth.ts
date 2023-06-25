@@ -129,6 +129,8 @@ export const activate = catchAsync(
       const { error: validationError } = schema.validate(body);
       if (!validationError) {
         const { name, auth_token, password } = body;
+        let [fname, ...rem] = name.split(" ");
+        let lname = rem.join(" ");
         verify(auth_token, process.env.JWT_SECRET, (err, decoded: UserT) => {
           if (err) return next(new AppError(err.message, 401));
           const { email } = decoded;
@@ -162,14 +164,15 @@ export const activate = catchAsync(
               SET
                 password = "${hashedPassword}",
                 status = "active",
-                name = ?
+                fname = ?,
+                lname = ?
               WHERE
                 email = ?;
               `;
               db.query(
                 {
                   sql: activateUserQuery,
-                  values: [name, email],
+                  values: [fname, lname, email],
                 },
                 (err, results) => {
                   if (err) return next(new AppError(err.message, 403));

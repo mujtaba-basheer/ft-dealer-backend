@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUser = exports.getAllUsers = exports.deleteUser = exports.addUser = void 0;
+exports.updateUser = exports.getMe = exports.getAllUsers = exports.deleteUser = exports.addUser = void 0;
 const dotenv_1 = require("dotenv");
 const Joi = require("joi");
 const mail_1 = require("../utils/mail");
@@ -100,13 +100,18 @@ exports.getAllUsers = (0, catch_async_1.default)(async (req, res, next) => {
         const { email } = req.user;
         const fetchUsersQuery = `
       SELECT
-        u.name,
+        fname,
+        lname,
+        CONCAT_WS(" ", fname, lname) as name,
+        user_name,
         email,
         r.title as role,
         IF(email = ?, 1, 0) as self
       FROM
-        (users as u
-        LEFT JOIN (roles as r) ON (u.role = r.id));
+        users as u
+        LEFT JOIN (roles as r) ON (u.role = r.id)
+      ORDER BY
+        fname;
       `;
         db_1.default.query({
             sql: fetchUsersQuery,
@@ -120,6 +125,42 @@ exports.getAllUsers = (0, catch_async_1.default)(async (req, res, next) => {
             res.status(200).json({
                 status: true,
                 data: results,
+            });
+        });
+    }
+    catch (error) {
+        return next(new app_error_1.default(error.message, error.statusCode || 501));
+    }
+});
+exports.getMe = (0, catch_async_1.default)(async (req, res, next) => {
+    try {
+        const { email } = req.user;
+        console.log({ email });
+        const fetchUsersQuery = `
+      SELECT
+        fname,
+        lname,
+        email
+      FROM
+        users
+      WHERE
+        email = ?;
+      `;
+        db_1.default.query({
+            sql: fetchUsersQuery,
+            values: [email],
+        }, (err, results, fields) => {
+            if (err) {
+                console.error(err);
+                return next(new app_error_1.default(err.message, 403));
+            }
+            else if (results.length === 0) {
+                return next(new app_error_1.default("User not found", 404));
+            }
+            // sending response
+            res.status(200).json({
+                status: true,
+                data: results[0],
             });
         });
     }

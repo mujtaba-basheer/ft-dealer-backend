@@ -1,7 +1,12 @@
 import * as express from "express";
 import * as cookieParser from "cookie-parser";
 import { config } from "dotenv";
-import { authRouter, userRouter, trailerRouter } from "./routes/index";
+import {
+  authRouter,
+  userRouter,
+  trailerRouter,
+  inventoryRouter,
+} from "./routes/index";
 
 // importing middleware handlers
 import { notFound, errorHandler } from "./middleware/error.js";
@@ -21,6 +26,7 @@ if (process.env.NODE_ENV === "development") {
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/trailer", trailerRouter);
+app.use("/api/inventory", inventoryRouter);
 
 // test endpoint
 app.get("/*", (req: express.Request, res: express.Response) => {

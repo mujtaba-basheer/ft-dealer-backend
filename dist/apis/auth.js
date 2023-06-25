@@ -96,6 +96,8 @@ exports.activate = (0, catch_async_1.default)(async (req, res, next) => {
         const { error: validationError } = schema.validate(body);
         if (!validationError) {
             const { name, auth_token, password } = body;
+            let [fname, ...rem] = name.split(" ");
+            let lname = rem.join(" ");
             (0, jsonwebtoken_1.verify)(auth_token, process.env.JWT_SECRET, (err, decoded) => {
                 if (err)
                     return next(new app_error_1.default(err.message, 401));
@@ -125,13 +127,14 @@ exports.activate = (0, catch_async_1.default)(async (req, res, next) => {
               SET
                 password = "${hashedPassword}",
                 status = "active",
-                name = ?
+                fname = ?,
+                lname = ?
               WHERE
                 email = ?;
               `;
                     db_1.default.query({
                         sql: activateUserQuery,
-                        values: [name, email],
+                        values: [fname, lname, email],
                     }, (err, results) => {
                         if (err)
                             return next(new app_error_1.default(err.message, 403));

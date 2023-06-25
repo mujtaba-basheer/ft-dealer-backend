@@ -139,13 +139,18 @@ export const getAllUsers = catchAsync(
 
       const fetchUsersQuery = `
       SELECT
-        u.name,
+        fname,
+        lname,
+        CONCAT_WS(" ", fname, lname) as name,
+        user_name,
         email,
         r.title as role,
         IF(email = ?, 1, 0) as self
       FROM
-        (users as u
-        LEFT JOIN (roles as r) ON (u.role = r.id));
+        users as u
+        LEFT JOIN (roles as r) ON (u.role = r.id)
+      ORDER BY
+        fname;
       `;
       db.query(
         {
@@ -162,6 +167,48 @@ export const getAllUsers = catchAsync(
           res.status(200).json({
             status: true,
             data: results,
+          });
+        }
+      );
+    } catch (error) {
+      return next(new AppError(error.message, error.statusCode || 501));
+    }
+  }
+);
+
+export const getMe = catchAsync(
+  async (req: Request & { user: UserT }, res: Response, next: NextFunction) => {
+    try {
+      const { email } = req.user;
+      console.log({ email });
+
+      const fetchUsersQuery = `
+      SELECT
+        fname,
+        lname,
+        email
+      FROM
+        users
+      WHERE
+        email = ?;
+      `;
+      db.query(
+        {
+          sql: fetchUsersQuery,
+          values: [email],
+        },
+        (err, results: UserT[], fields) => {
+          if (err) {
+            console.error(err);
+            return next(new AppError(err.message, 403));
+          } else if (results.length === 0) {
+            return next(new AppError("User not found", 404));
+          }
+
+          // sending response
+          res.status(200).json({
+            status: true,
+            data: results[0],
           });
         }
       );
