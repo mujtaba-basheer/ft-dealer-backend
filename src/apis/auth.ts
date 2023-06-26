@@ -81,6 +81,7 @@ export const login = catchAsync(
               if (process.env.NODE_ENV === "production") {
                 cookieOptions.httpOnly = true;
                 cookieOptions.domain = process.env.COOKIE_DOMAIN;
+                cookieOptions.secure = true;
               }
               res.cookie("jwt", token, cookieOptions);
 
