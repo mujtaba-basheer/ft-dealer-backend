@@ -11,7 +11,6 @@ const db_1 = require("../db");
 const jsonwebtoken_1 = require("jsonwebtoken");
 (0, dotenv_1.config)();
 exports.login = (0, catch_async_1.default)(async (req, res, next) => {
-    console.log("here");
     try {
         const body = req.body;
         // defining request body schema

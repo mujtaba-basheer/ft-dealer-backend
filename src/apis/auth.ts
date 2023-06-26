@@ -22,7 +22,6 @@ type JwtDecodedT = {
 
 export const login = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    console.log("here");
     try {
       type ReqBodyT = {
         email: string;

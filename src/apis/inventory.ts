@@ -82,7 +82,8 @@ export const getFilledDates = catchAsync(
               LEFT JOIN dealer_inventory as i ON (
                 t.model_no = i.model_no
                 AND i.ts = ?
-              );
+              )
+              ORDER BY category;
               `;
               db.query(
                 {
@@ -111,7 +112,8 @@ export const getFilledDates = catchAsync(
               SELECT
                 *
               FROM
-                trailers;
+                trailers
+              ORDER BY category;
               `;
               db.query(getRecordQuery, (err, results: TrailerT[], fields) => {
                 if (err) {
@@ -143,6 +145,9 @@ export const getFilledDates = catchAsync(
             data: {
               trailers,
               records,
+              categories: Array.from(
+                new Set<string>((trailers as TrailerT[]).map((t) => t.category))
+              ),
             },
           });
         }

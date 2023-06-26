@@ -39,7 +39,8 @@ exports.getFilledDates = (0, catch_async_1.default)(async (req, res, next) => {
               LEFT JOIN dealer_inventory as i ON (
                 t.model_no = i.model_no
                 AND i.ts = ?
-              );
+              )
+              ORDER BY category;
               `;
                     db_1.default.query({
                         sql: getRecordQuery,
@@ -62,7 +63,8 @@ exports.getFilledDates = (0, catch_async_1.default)(async (req, res, next) => {
               SELECT
                 *
               FROM
-                trailers;
+                trailers
+              ORDER BY category;
               `;
                     db_1.default.query(getRecordQuery, (err, results, fields) => {
                         if (err) {
@@ -87,6 +89,7 @@ exports.getFilledDates = (0, catch_async_1.default)(async (req, res, next) => {
                 data: {
                     trailers,
                     records,
+                    categories: Array.from(new Set(trailers.map((t) => t.category))),
                 },
             });
         });
