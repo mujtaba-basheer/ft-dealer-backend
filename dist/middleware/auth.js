@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validate = exports.checkAdmin = exports.checkLogin = exports.protect = void 0;
+exports.validate = exports.checkDealer = exports.checkAdmin = exports.checkLogin = exports.protect = void 0;
 const jsonwebtoken_1 = require("jsonwebtoken");
 const app_error_1 = require("../utils/app-error");
 const catch_async_1 = require("../utils/catch-async");
@@ -73,6 +73,17 @@ exports.checkAdmin = (0, catch_async_1.default)(async (req, res, next) => {
     try {
         const { role } = req.user;
         if (role === 1)
+            return next();
+        throw new Error("Unauthorized!");
+    }
+    catch (error) {
+        return next(new app_error_1.default(error.message, error.statusCode || 401));
+    }
+});
+exports.checkDealer = (0, catch_async_1.default)(async (req, res, next) => {
+    try {
+        const { role } = req.user;
+        if (role === 2)
             return next();
         throw new Error("Unauthorized!");
     }

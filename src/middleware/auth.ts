@@ -82,6 +82,18 @@ export const checkAdmin = catchAsync(
   }
 );
 
+export const checkDealer = catchAsync(
+  async (req: Request & { user: UserT }, res: Response, next: NextFunction) => {
+    try {
+      const { role } = req.user;
+      if (role === 2) return next();
+      throw new Error("Unauthorized!");
+    } catch (error) {
+      return next(new AppError(error.message, error.statusCode || 401));
+    }
+  }
+);
+
 export const validate = catchAsync(
   async (req: Request & { user: any }, res: Response, next: NextFunction) => {
     try {

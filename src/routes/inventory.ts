@@ -1,20 +1,29 @@
 import { Router } from "express";
 import {
   addInventoryRecord,
-  getFilledDates,
+  getSubmissions,
   getGlobalInventoryItems,
+  getSubmissionsCSV,
 } from "../apis/inventory";
-import { protect } from "../middleware/auth";
+import { protect, checkDealer } from "../middleware/auth";
 
 const inventoryRouter = Router();
 
 // get global inventory items
-inventoryRouter.get("/", protect, getGlobalInventoryItems);
+inventoryRouter.get("/", protect, checkDealer, getGlobalInventoryItems);
 
 // add inventory record
-inventoryRouter.post("/", protect, addInventoryRecord);
+inventoryRouter.post("/", protect, checkDealer, addInventoryRecord);
 
 // get submissions
-inventoryRouter.get("/submissions", protect, getFilledDates);
+inventoryRouter.get("/submissions", protect, checkDealer, getSubmissions);
+
+// get submissions csv
+inventoryRouter.get(
+  "/submissions-csv",
+  protect,
+  checkDealer,
+  getSubmissionsCSV
+);
 
 export default inventoryRouter;

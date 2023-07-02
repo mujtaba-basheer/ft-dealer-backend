@@ -1,3 +1,3 @@
 type InventoryDateNumLimit = number;
 
-export const inventoryDateNumLimit = 6;
+export const inventoryDateNumLimit: InventoryDateNumLimit = 6;
