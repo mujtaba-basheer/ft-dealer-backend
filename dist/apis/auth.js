@@ -65,6 +65,7 @@ exports.login = (0, catch_async_1.default)(async (req, res, next) => {
                         data: {
                             name: obj.fname,
                             email: obj.email,
+                            role: obj.role,
                         },
                         msg: "Logged In Successfully",
                     });

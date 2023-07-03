@@ -90,6 +90,7 @@ export const login = catchAsync(
                 data: {
                   name: obj.fname,
                   email: obj.email,
+                  role: obj.role,
                 },
                 msg: "Logged In Successfully",
               });

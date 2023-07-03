@@ -16,6 +16,7 @@ exports.addUser = (0, catch_async_1.default)(async (req, res, next) => {
         // defining user schema
         const schema = Joi.object({
             email: Joi.string().email().required(),
+            user_name: Joi.string().required(),
             role: Joi.number()
                 .integer()
                 .allow(...roles_1.default),
@@ -23,24 +24,32 @@ exports.addUser = (0, catch_async_1.default)(async (req, res, next) => {
         // validating request body again schema
         const { error: validationError } = schema.validate(user);
         if (!validationError) {
-            const { email, role } = user;
+            const { email, user_name, role } = user;
             // adding user data to db
+            const insertQuery = `
+        INSERT INTO
+          users
+          (
+            email,
+            user_name,
+            role,
+            status
+          )
+        VALUES
+          (
+            ?,
+            ?,
+            ?,
+            "inactive"
+          );
+        `;
             db_1.default.query({
-                sql: `INSERT INTO
-            users (
-              email,
-              role,
-              status
-            ) VALUES (
-              ?,
-              ?,
-              "inactive"
-            );`,
-                values: [email, role],
+                sql: insertQuery,
+                values: [email, user_name, role],
             }, (err, results, fields) => {
                 if (err) {
                     if (err.errno === 1062) {
-                        return next(new app_error_1.default(`User with email '${email}' already exists!`, 403));
+                        return next(new app_error_1.default(`User with email/username already exists!`, 403));
                     }
                     console.error(err);
                     return next(new app_error_1.default(err.message, 403));

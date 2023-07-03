@@ -22,6 +22,7 @@ export const addUser = catchAsync(
     try {
       type ReqBodyT = {
         email: string;
+        user_name: string;
         role: number;
       };
       const user = req.body as ReqBodyT;
@@ -29,6 +30,7 @@ export const addUser = catchAsync(
       // defining user schema
       const schema = Joi.object<ReqBodyT>({
         email: Joi.string().email().required(),
+        user_name: Joi.string().required(),
         role: Joi.number()
           .integer()
           .allow(...roles),
@@ -37,31 +39,36 @@ export const addUser = catchAsync(
       // validating request body again schema
       const { error: validationError } = schema.validate(user);
       if (!validationError) {
-        const { email, role } = user;
+        const { email, user_name, role } = user;
 
         // adding user data to db
+        const insertQuery = `
+        INSERT INTO
+          users
+          (
+            email,
+            user_name,
+            role,
+            status
+          )
+        VALUES
+          (
+            ?,
+            ?,
+            ?,
+            "inactive"
+          );
+        `;
         db.query(
           {
-            sql: `INSERT INTO
-            users (
-              email,
-              role,
-              status
-            ) VALUES (
-              ?,
-              ?,
-              "inactive"
-            );`,
-            values: [email, role],
+            sql: insertQuery,
+            values: [email, user_name, role],
           },
           (err, results, fields) => {
             if (err) {
               if (err.errno === 1062) {
                 return next(
-                  new AppError(
-                    `User with email '${email}' already exists!`,
-                    403
-                  )
+                  new AppError(`User with email/username already exists!`, 403)
                 );
               }
               console.error(err);
