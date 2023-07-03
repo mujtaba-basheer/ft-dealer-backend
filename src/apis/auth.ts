@@ -205,6 +205,7 @@ export const activate = catchAsync(
                     data: {
                       name: user.fname,
                       email: user.email,
+                      role: user.role,
                     },
                     msg: "Account Activated Successfully",
                   });

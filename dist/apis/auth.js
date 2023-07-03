@@ -162,6 +162,7 @@ exports.activate = (0, catch_async_1.default)(async (req, res, next) => {
                             data: {
                                 name: user.fname,
                                 email: user.email,
+                                role: user.role,
                             },
                             msg: "Account Activated Successfully",
                         });

@@ -21,6 +21,7 @@ app.use("/api/auth", index_1.authRouter);
 app.use("/api/user", index_1.userRouter);
 app.use("/api/trailer", index_1.trailerRouter);
 app.use("/api/inventory", index_1.inventoryRouter);
+app.use("/api/announcement", index_1.announcementRouter);
 // test endpoint
 app.get("/*", (req, res) => {
     res.send("API is running...\n");

@@ -6,6 +6,7 @@ import {
   userRouter,
   trailerRouter,
   inventoryRouter,
+  announcementRouter,
 } from "./routes/index";
 
 // importing middleware handlers
@@ -27,6 +28,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/trailer", trailerRouter);
 app.use("/api/inventory", inventoryRouter);
+app.use("/api/announcement", announcementRouter);
 
 // test endpoint
 app.get("/*", (req: express.Request, res: express.Response) => {
